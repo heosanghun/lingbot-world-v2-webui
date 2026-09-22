@@ -9,3 +9,12 @@ logs/
 *.json
 *.pth
 *.zip
+*.safetensors
+lingbot-world-v2-*/
+outputs/
+*.log
+*.pdf
+paper_text.txt
+frame_*.jpg
+test_output*.mp4
+.cache/
