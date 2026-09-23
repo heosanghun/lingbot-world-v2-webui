@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 LingBot-World-V2 Web UI (Gradio)
-Interactive World Simulator & Video Generator
+Interactive World Simulator & Real-time Game Explorer
 Local Server: http://localhost:7860
 """
 
@@ -47,7 +47,7 @@ def load_example_data(example_name):
 def handle_start_world(image, prompt, seed):
     if image is None:
         return (
-            None, None, None,
+            None, None,
             "❌ 시작 이미지를 업로드하거나 예제 프리셋을 선택해 주세요.",
             "준비되지 않음"
         )
@@ -59,28 +59,31 @@ def handle_start_world(image, prompt, seed):
             prompt=prompt,
             seed=int(seed) if seed is not None else 42,
         )
+        
+        # Automatically generate Step 1 (W: forward motion) so the 3D viewport is immediately moving!
+        step1_res = engine.step("W", prompt=prompt)
+        
         status_msg = (
-            f"✅ [월드 세션 시작 완료]\n"
-            f"• 세션 ID: {init_res['session_id']}\n"
-            f"• 뷰포트가 활성화되었습니다. W, A, S, D 키를 눌러 즉시 3D 공간을 전진/회전하세요!\n"
-            f"• 1스텝당 약 2.5초 만에 다음 장면이 실시간 생성됩니다."
+            f"🎮 [월드 시뮬레이션 가동 중!]\n"
+            f"• 스텝 1 (전진) 생성 완료: {step1_res['latency_s']}초 (1.6초 디노이징 + VAE)\n"
+            f"• 뷰포트에서 실시간 3D 영상이 재생 중입니다!\n"
+            f"• 키보드 [W, A, S, D, Q, E, Space, C]를 누르거나 화면의 버튼을 눌러 이동하세요!"
         )
         return (
-            init_res["initial_clip"], # latest moving clip (shows starting scene video loop!)
-            init_res["current_image"], # current still frame
-            init_res["initial_clip"], # full journey video
+            step1_res["latest_clip"],
+            step1_res["full_video"],
             status_msg,
-            init_res["history"],
+            step1_res["history"],
         )
     except Exception as e:
         logging.error(f"Failed to start world session: {e}", exc_info=True)
-        return None, None, None, f"❌ 세션 시작 실패: {str(e)}", "에러"
+        return None, None, f"❌ 세션 시작 실패: {str(e)}", "에러"
 
 def handle_step_action(action_name, prompt, step_size, turn_angle):
     engine = InteractiveEngine.get_instance()
     if engine.active_session is None:
         return (
-            None, None, None,
+            None, None,
             "⚠️ 먼저 [🚀 탐험 시작 / 월드 초기화] 버튼을 눌러 월드를 시작해 주세요.",
             "월드 미시작"
         )
@@ -93,21 +96,20 @@ def handle_step_action(action_name, prompt, step_size, turn_angle):
             turn_angle=float(turn_angle),
         )
         status_msg = (
-            f"🎮 [스텝 {res['step_count']} 완료: {res['action']}]\n"
-            f"• 생성 소요 시간: {res['latency_s']}초 (1.6초 디노이징 + VAE)\n"
+            f"🎮 [스텝 {res['step_count']} 이동 완료: {res['action']}]\n"
+            f"• 실시간 생성 시간: {res['latency_s']}초 (1.6초 디노이징 + VAE)\n"
             f"• 누적 프레임: {len(engine.active_session['cumulative_frames'])} 프레임\n"
-            f"• 다음 이동 방향 키를 누르세요!"
+            f"• 다음 이동 방향 키(W, A, S, D)를 누르세요!"
         )
         return (
             res["latest_clip"],
-            res["current_image"],
             res["full_video"],
             status_msg,
             res["history"],
         )
     except Exception as e:
         logging.error(f"Step action error: {e}", exc_info=True)
-        return None, None, None, f"❌ 이동 생성 실패: {str(e)}", "에러 발생"
+        return None, None, f"❌ 이동 생성 실패: {str(e)}", "에러 발생"
 
 def make_step_handler(action_code):
     def _handler(prompt_val, step_size_val, turn_angle_val):
@@ -217,56 +219,73 @@ def run_classic_inference(
 # UI Construction
 # ==============================================================================
 def create_ui():
-    keyboard_js = """
-    <script>
-    document.addEventListener('keydown', function(e) {
-        // Do not intercept keystrokes if the user is typing in a text field
-        const tag = document.activeElement ? document.activeElement.tagName : '';
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    keyboard_client_js = """
+    () => {
+        if (window._lingbot_installed) return;
+        window._lingbot_installed = true;
+        console.log("🎮 LingBot World Controller Active!");
 
-        const key = e.key.toLowerCase();
-        let targetId = null;
-
-        if (key === 'w' || e.key === 'ArrowUp') targetId = 'btn_act_w';
-        else if (key === 's' || e.key === 'ArrowDown') targetId = 'btn_act_s';
-        else if (key === 'a' || e.key === 'ArrowLeft') targetId = 'btn_act_a';
-        else if (key === 'd' || e.key === 'ArrowRight') targetId = 'btn_act_d';
-        else if (key === 'q') targetId = 'btn_act_q';
-        else if (key === 'e') targetId = 'btn_act_e';
-        else if (key === ' ') { e.preventDefault(); targetId = 'btn_act_space'; }
-        else if (key === 'c') targetId = 'btn_act_c';
-        else if (key === 'x') targetId = 'btn_act_x';
-
-        if (targetId) {
-            const el = document.getElementById(targetId);
-            if (el) {
-                const btn = el.tagName === 'BUTTON' ? el : (el.querySelector('button') || el);
-                btn.style.transform = 'scale(0.92)';
-                setTimeout(() => { btn.style.transform = 'none'; }, 150);
-                btn.click();
+        window.addEventListener("keydown", function(e) {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                return;
             }
-        }
-    });
-    </script>
+            const key = e.key.toLowerCase();
+            const keyMap = {
+                'w': 'btn_act_w', 'arrowup': 'btn_act_w',
+                's': 'btn_act_s', 'arrowdown': 'btn_act_s',
+                'a': 'btn_act_a', 'arrowleft': 'btn_act_a',
+                'd': 'btn_act_d', 'arrowright': 'btn_act_d',
+                'q': 'btn_act_q',
+                'e': 'btn_act_e',
+                ' ': 'btn_act_space',
+                'c': 'btn_act_c',
+                'x': 'btn_act_x'
+            };
+            const btnId = keyMap[key];
+            if (btnId) {
+                if (key === ' ') e.preventDefault();
+                const el = document.getElementById(btnId);
+                if (el) {
+                    const btn = el.tagName === 'BUTTON' ? el : (el.querySelector('button') || el);
+                    btn.classList.add('btn-pressed-anim');
+                    setTimeout(() => btn.classList.remove('btn-pressed-anim'), 200);
+                    btn.click();
+                }
+            }
+        });
+    }
     """
 
-    custom_html = f"""
+    custom_html = """
     <style>
-    .pad-btn button {{
+    .pad-btn button {
         font-size: 1.15rem !important;
         font-weight: bold !important;
-        padding: 12px 6px !important;
+        padding: 14px 6px !important;
         border-radius: 8px !important;
-    }}
-    .history-box {{
-        background: #1e1e2f;
-        padding: 12px;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 0.95rem;
-    }}
+        transition: all 0.1s ease !important;
+    }
+    .btn-main-act button {
+        background: #e65100 !important;
+        color: white !important;
+    }
+    .btn-pressed-anim button {
+        transform: scale(0.92) !important;
+        background: #ff9800 !important;
+        color: white !important;
+        box-shadow: 0 0 16px rgba(255, 152, 0, 0.8) !important;
+    }
+    #game_viewport video {
+        width: 100% !important;
+        max-height: 500px !important;
+        object-fit: contain !important;
+        border-radius: 12px !important;
+        background: #000 !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7) !important;
+    }
     </style>
-    {keyboard_js}
+    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="display:none;" onload="if(!window._lingbot_installed){window._lingbot_installed=true; window.addEventListener('keydown', function(e){ const a=document.activeElement; if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return; const k=e.key.toLowerCase(); const m={'w':'btn_act_w','arrowup':'btn_act_w','s':'btn_act_s','arrowdown':'btn_act_s','a':'btn_act_a','arrowleft':'btn_act_a','d':'btn_act_d','arrowright':'btn_act_d','q':'btn_act_q','e':'btn_act_e',' ':'btn_act_space','c':'btn_act_c','x':'btn_act_x'}; const id=m[k]; if(id){if(k===' ')e.preventDefault(); const el=document.getElementById(id); if(el){const b=el.tagName==='BUTTON'?el:(el.querySelector('button')||el); b.click();}} }); console.log('🎮 Inline key listener ready!'); }">
     """
 
     examples = get_available_examples()
@@ -278,44 +297,50 @@ def create_ui():
             """
             # 🌐 LingBot-World 2.0 (LingBot-World-Infinity)
             ### Causal Interactive World Simulator & Real-time Explorer
-            * **🎮 실시간 월드 탐험 (Interactive Explorer)**: 이미지 1장을 넣고 키보드 **[W, A, S, D, Q, E, Space, C]**로 게임처럼 무한한 3D 세계를 직접 걸어 다니며 탐험하세요!
-            * **인메모리 GPU 가속**: 모델 상주형 아키텍처로 1스텝당 **단 ~2.5초** 만에 실시간 생성됩니다.
+            * **🎮 실시간 3D 월드 게임 탐험**: 이미지 1장을 넣고 키보드 **[W, A, S, D, Q, E, Space, C]** 또는 방향키(↑, ↓, ←, →)를 누르면 게임처럼 3D 공간을 실시간으로 걸어 다니며 탐험합니다!
+            * **인메모리 GPU 초고속 렌더링**: 모델 상주형 엔진으로 1스텝당 **단 ~2.5초** 만에 실시간 생성됩니다.
             """
         )
 
         with gr.Tabs():
             # ==============================================================
-            # TAB 1: INTERACTIVE WORLD EXPLORER (신규 핵심 기능)
+            # TAB 1: INTERACTIVE WORLD EXPLORER (메인 실시간 탐험 게임 모드)
             # ==============================================================
             with gr.Tab("🎮 실시간 월드 탐험 (Interactive World Explorer)"):
                 with gr.Row():
-                    # 좌측 제어 컬럼
-                    with gr.Column(scale=5):
+                    # 좌측 제어 패널 (Controls)
+                    with gr.Column(scale=4):
                         gr.Markdown("### 1️⃣ 월드 설정 & 시작")
-                        with gr.Row():
-                            inter_preset = gr.Dropdown(
-                                choices=examples,
-                                label="예제 프리셋 (Examples)",
-                                value="03" if "03" in examples else (examples[0] if examples else None),
-                            )
-                        inter_image = gr.Image(label="시작 이미지 (First Frame Image)", type="pil")
+                        inter_preset = gr.Dropdown(
+                            choices=examples,
+                            label="예제 프리셋 (Examples)",
+                            value="00" if "00" in examples else (examples[0] if examples else None),
+                        )
+                        inter_image = gr.Image(label="시작 이미지 (First Frame Image)", type="pil", height=200)
                         inter_prompt = gr.Textbox(
                             label="월드 환경 프롬프트 (Prompt / Director)",
-                            lines=3,
-                            placeholder="세계관 또는 현재 보고 있는 풍경을 묘사하세요. (탐험 도중 언제든 수정 가능)",
-                            value="A serene lakeside scene with a lone tree standing in calm water, surrounded by distant snow-capped mountains under a bright blue sky.",
+                            lines=2,
+                            placeholder="세계관 또는 현재 보고 있는 풍경을 묘사하세요...",
+                            value="The video presents a soaring journey through a fantasy jungle towards an ancient gothic castle.",
                         )
                         with gr.Row():
-                            inter_seed = gr.Number(label="시드 (Seed)", value=42, precision=0)
+                            inter_seed = gr.Number(label="시드 (Seed)", value=42, precision=0, scale=1)
                             btn_start_world = gr.Button("🚀 탐험 시작 / 월드 초기화", variant="primary", scale=2)
 
                         gr.Markdown("### 2️⃣ 실시간 WASD 조작 패드")
-                        gr.Markdown("*💡 화면의 버튼을 클릭하거나, 키보드의 **[W, A, S, D, Q, E, Space, C, X]** 키를 직접 누르세요!*")
+                        gr.Markdown(
+                            """
+                            *🕹️ **키보드 조작 안내**:*
+                            * **W / ↑**: 전진 | **S / ↓**: 후진
+                            * **A / ←**: 좌이동 | **D / →**: 우이동
+                            * **Q / E**: 좌/우 회전 | **Space / C**: 상승/하강
+                            """
+                        )
                         
                         with gr.Group():
                             with gr.Row():
                                 btn_q = gr.Button("⤹ Q: 좌회전", elem_id="btn_act_q", elem_classes=["pad-btn"])
-                                btn_w = gr.Button("⬆️ W: 전진", elem_id="btn_act_w", variant="primary", elem_classes=["pad-btn"])
+                                btn_w = gr.Button("⬆️ W: 전진", elem_id="btn_act_w", variant="primary", elem_classes=["pad-btn", "btn-main-act"])
                                 btn_e = gr.Button("⤸ E: 우회전", elem_id="btn_act_e", elem_classes=["pad-btn"])
                             with gr.Row():
                                 btn_a = gr.Button("⬅️ A: 좌이동", elem_id="btn_act_a", elem_classes=["pad-btn"])
@@ -326,39 +351,38 @@ def create_ui():
                                 btn_s = gr.Button("⬇️ S: 후진", elem_id="btn_act_s", elem_classes=["pad-btn"])
                                 btn_c = gr.Button("🔽 C: 하강", elem_id="btn_act_c", elem_classes=["pad-btn"])
 
-                        with gr.Accordion("⚙️ 이동 제어 미세 설정", open=False):
+                        with gr.Accordion("⚙️ 이동 미세 설정", open=False):
                             step_size = gr.Slider(0.1, 1.5, value=0.5, step=0.1, label="스텝 이동 거리 (Step Size)")
                             turn_angle = gr.Slider(5.0, 30.0, value=12.0, step=1.0, label="회전 각도 (Turn Angle Deg)")
 
-                    # 우측 뷰포트 컬럼
-                    with gr.Column(scale=7):
-                        gr.Markdown("### 3️⃣ 뷰포트 & 실시간 스트림")
-                        with gr.Row():
-                            inter_latest_video = gr.Video(
-                                label="최신 이동 뷰포트 (Latest Step Clip)",
-                                autoplay=True,
-                                loop=True,
-                                height=340
-                            )
-                            inter_current_view = gr.Image(
-                                label="현재 1인칭 시점 (Current View)",
-                                height=340
-                            )
-
-                        inter_full_video = gr.Video(label="🎬 누적 전체 여정 비디오 (Full Journey Video)")
+                    # 우측 메인 게임 뷰포트 (The Hero Game Screen)
+                    with gr.Column(scale=8):
+                        gr.Markdown("### 🎥 3D 인터랙티브 월드 뷰포트 (Interactive Viewport)")
                         
-                        gr.Markdown("### 📜 탐험 타임라인 및 상태")
+                        # THE SINGLE DOMINANT GAME SCREEN
+                        inter_main_video = gr.Video(
+                            label="3D 실시간 월드 화면 (Live Screen)",
+                            autoplay=True,
+                            loop=True,
+                            height=480,
+                            elem_id="game_viewport",
+                            interactive=False,
+                        )
+                        
                         inter_history_txt = gr.Textbox(
-                            label="탐험 경로 히스토리 (Action Path History)",
-                            value="🏁 준비 대기 중",
-                            interactive=False
+                            label="📍 탐험 경로 타임라인 (Action Path)",
+                            value="🏁 [대기 중] 좌측의 [🚀 탐험 시작]을 누르면 3D 시뮬레이션이 가동됩니다.",
+                            interactive=False,
                         )
                         inter_status_log = gr.Textbox(
-                            label="상태 및 성능 로그 (Status & Logs)",
-                            lines=5,
+                            label="⚡ 실시간 엔진 상태 & 성능 로그",
+                            lines=3,
                             interactive=False,
-                            value="[대기] 이미지를 업로드하고 [🚀 탐험 시작 / 월드 초기화] 버튼을 눌러주세요."
+                            value="[준비] 이미지를 선택하고 [🚀 탐험 시작 / 월드 초기화] 버튼을 눌러주세요."
                         )
+
+                        with gr.Accordion("🎬 누적 전체 여정 풀영상 다시보기 및 다운로드", open=False):
+                            inter_full_video = gr.Video(label="처음부터 지금까지 탐험한 전체 연속 비디오", autoplay=False)
 
                 # Event handlers for Tab 1
                 def on_select_preset(preset_name):
@@ -377,15 +401,14 @@ def create_ui():
                     fn=handle_start_world,
                     inputs=[inter_image, inter_prompt, inter_seed],
                     outputs=[
-                        inter_latest_video,
-                        inter_current_view,
+                        inter_main_video,
                         inter_full_video,
                         inter_status_log,
                         inter_history_txt,
                     ]
                 )
 
-                # Bind all 9 action buttons
+                # Bind all 9 action buttons using safe factory function
                 for btn, act_key in [
                     (btn_w, "W"), (btn_s, "S"), (btn_a, "A"), (btn_d, "D"),
                     (btn_q, "Q"), (btn_e, "E"), (btn_space, "SPACE"),
@@ -395,8 +418,7 @@ def create_ui():
                         fn=make_step_handler(act_key),
                         inputs=[inter_prompt, step_size, turn_angle],
                         outputs=[
-                            inter_latest_video,
-                            inter_current_view,
+                            inter_main_video,
                             inter_full_video,
                             inter_status_log,
                             inter_history_txt,
@@ -493,6 +515,9 @@ def create_ui():
                     outputs=[output_video, classic_status_log]
                 )
 
+        # Register client keyboard listener via demo.load
+        demo.load(None, None, None, js=keyboard_client_js)
+
     return demo
 
 def main():
@@ -506,7 +531,7 @@ def main():
     print("🚀 LingBot-World 2.0 Infinity Interactive Web UI 서버 시작")
     print(f"🔗 로컬 서버 주소: http://localhost:{args.port} 또는 http://127.0.0.1:{args.port}")
     print(f"🔗 외부 접속 바인딩: http://{args.host}:{args.port}")
-    print("🎮 기능: 실시간 WASD 3D 월드 탐험 + 클래식 비디오 생성기")
+    print("🎮 기능: 실시간 WASD 3D 월드 탐험 (Game Viewport) + 클래식 비디오 생성기")
     print("=" * 60)
 
     demo = create_ui()
