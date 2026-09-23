@@ -21,6 +21,24 @@ Robbyant Team
 
 -----
 
+## 🎮 LingBot-World 2.0 WebUI & Real-Time Interactive Explorer
+
+This repository includes a Gradio-based WebUI with an **in-memory GPU-accelerated Interactive World Simulator**, allowing you to explore infinite 3D worlds in real time using **keyboard WASD controls**!
+
+### 🌟 Key Features
+- **🎮 Real-Time 3D Game Viewport**: Control your first-person camera movement in real time with keyboard (`W`, `A`, `S`, `D`, `Q`, `E`, `Space`, `C`) or on-screen directional buttons.
+- **⚡ In-Memory GPU Acceleration**: Keeps the `1.3B Causal-Fast` model resident in VRAM for rapid ~1.7s rollout per movement chunk.
+- **🎬 Continuous Journey Stitching**: Automatically stitches all explored steps into a single seamless continuous journey video.
+- **📝 Real-Time Prompt Steering (Director Mode)**: Change the text prompt mid-exploration to transition weather, lighting, or scene semantics.
+
+### 🚀 Launching the WebUI
+```bash
+python app.py --host 0.0.0.0 --port 7860
+```
+Open your browser at **http://localhost:7860** (or `http://127.0.0.1:7860`).
+
+-----
+
 We present **LingBot-World 2.0** (also known as **LingBot-World-Infinity**), an advanced iteration of [LingBot-World](https://technology.robbyant.com/lingbot-world) featuring four distinct upgrades.
 - **Unbounded Interaction Horizon**: Our model achieves an unbounded interaction horizon while maintaining consistent output quality, benefiting from a carefully crafted causal pretraining paradigm.
 - **Rapid Response Time**: Through distilling a real-time variant from the base model, our system guarantees rapid response time, sufficient to drive 720p video streams at 60 fps.
