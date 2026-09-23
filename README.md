@@ -25,17 +25,24 @@ Robbyant Team
 
 This repository includes a Gradio-based WebUI with an **in-memory GPU-accelerated Interactive World Simulator**, allowing you to explore infinite 3D worlds in real time using **keyboard WASD controls**!
 
+- 🌐 **Cloudflare Pages Landing & Live Showcase**: [https://lingbot-world-v2-webui.pages.dev/](https://lingbot-world-v2-webui.pages.dev/)
+- ⚡ **Live GPU Web UI (Cloudflare Edge Tunnel)**: [https://chocolate-auckland-campus-kitty.trycloudflare.com](https://chocolate-auckland-campus-kitty.trycloudflare.com)
+
 ### 🌟 Key Features
 - **🎮 Real-Time 3D Game Viewport**: Control your first-person camera movement in real time with keyboard (`W`, `A`, `S`, `D`, `Q`, `E`, `Space`, `C`) or on-screen directional buttons.
 - **⚡ In-Memory GPU Acceleration**: Keeps the `1.3B Causal-Fast` model resident in VRAM for rapid ~1.7s rollout per movement chunk.
 - **🎬 Continuous Journey Stitching**: Automatically stitches all explored steps into a single seamless continuous journey video.
 - **📝 Real-Time Prompt Steering (Director Mode)**: Change the text prompt mid-exploration to transition weather, lighting, or scene semantics.
 
-### 🚀 Launching the WebUI
+### 🚀 Launching the WebUI & Tunnel
 ```bash
+# 1. Start local GPU WebUI server
 python app.py --host 0.0.0.0 --port 7860
+
+# 2. (Optional) Start Cloudflare Edge Tunnel for public remote access
+bash start_tunnel.sh
 ```
-Open your browser at **http://localhost:7860** (or `http://127.0.0.1:7860`).
+Open your browser at **http://localhost:7860** (local) or via the Cloudflare Edge Tunnel URL.
 
 -----
 

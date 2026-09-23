@@ -258,7 +258,8 @@
     <h1>LingBot-World <span>2.0 (Infinity)</span></h1>
     <p class="subtitle">2D 이미지 1장으로 무한한 3D 가상 세계를 창조하고, 키보드 WASD 방향키로 게임처럼 실시간 탐험하는 인공지능 월드 모델</p>
     <div class="nav-buttons">
-      <a href="http://localhost:7860" target="_blank" class="btn btn-primary">🎮 로컬 실시간 WebUI 접속 (Port 7860)</a>
+      <a href="https://chocolate-auckland-campus-kitty.trycloudflare.com" target="_blank" class="btn btn-primary" style="box-shadow: 0 0 15px rgba(255, 111, 0, 0.4);">⚡ 실시간 GPU Web UI 열기 (온라인 추론)</a>
+      <a href="#live-simulator-embed" class="btn btn-secondary">🖥️ 내장 시뮬레이터로 이동</a>
       <a href="https://github.com/heosanghun/lingbot-world-v2-webui" target="_blank" class="btn btn-secondary">📦 GitHub 저장소</a>
       <a href="https://www.reactor.inc/lingbot-world-v2" target="_blank" class="btn btn-secondary">🌐 Reactor 공식 클라우드 데모</a>
       <a href="https://arxiv.org/abs/2607.07534" target="_blank" class="btn btn-secondary">📄 arXiv 기술 보고서</a>
@@ -299,16 +300,52 @@
               <div class="pad-key" id="k_c" onclick="triggerKey('C', '🔽 하강')">C<br><span style="font-size:0.75rem;">하강</span></div>
             </div>
             <div class="key-info">
-              💡 <strong>조작 팁:</strong> 로컬 GPU 서버(<a href="http://localhost:7860" target="_blank" style="color:var(--accent);">http://localhost:7860</a>)를 실행하면, 누르는 즉시 신경망이 2초 만에 새로운 공간을 렌더링합니다.
+              💡 <strong>GPU 실시간 추론 활성화:</strong> Cloudflare Edge GPU 터널이 상시 연결되어 있습니다. 아래 버튼을 누르면 누구나 즉시 NVIDIA RTX 6000 Ada GPU에서 실시간 3D 월드를 생성하고 WASD로 자유롭게 탐험할 수 있습니다.
             </div>
           </div>
 
-          <div style="margin-top: 20px;">
-            <a href="http://localhost:7860" target="_blank" class="btn btn-primary" style="width: 100%; justify-content: center;">
-              🚀 로컬 Web UI 열기 (GPU 추론)
+          <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+            <a href="https://chocolate-auckland-campus-kitty.trycloudflare.com" target="_blank" class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 1.05rem; padding: 14px; box-shadow: 0 0 20px rgba(255, 111, 0, 0.5);">
+              🚀 실시간 Web UI 열기 (GPU 추론)
             </a>
+            <div style="display: flex; gap: 8px;">
+              <a href="#live-simulator-embed" class="btn btn-secondary" style="flex: 1; justify-content: center; font-size: 0.85rem; padding: 8px;">
+                ⬇️ 페이지 내에서 바로 열기
+              </a>
+              <a href="http://localhost:7860" target="_blank" class="btn btn-secondary" style="flex: 1; justify-content: center; font-size: 0.85rem; padding: 8px;" title="호스트 로컬 머신에서 직접 접속 시 사용">
+                💻 로컬 접속 (Port 7860)
+              </a>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Live GPU Simulator Embed Section -->
+    <div id="live-simulator-embed" style="margin-bottom: 50px; background: var(--card-bg); border: 1px solid var(--accent); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 229, 255, 0.15);">
+      <div style="background: #11141e; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--card-border); flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="dots">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <span style="font-weight: 700; color: #fff; font-size: 1rem;">⚡ LingBot-World 2.0 실시간 GPU 추론 엔진 (Live Web UI)</span>
+          <span style="background: rgba(0,229,255,0.15); color: var(--accent); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; border: 1px solid rgba(0,229,255,0.4);">NVIDIA RTX 6000 Ada (48GB VRAM) 연결됨</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a href="https://chocolate-auckland-campus-kitty.trycloudflare.com" target="_blank" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem;">
+            전체화면 새 창 열기 ↗
+          </a>
+        </div>
+      </div>
+      <div style="position: relative; width: 100%; height: 920px; background: #0b0c10;">
+        <iframe 
+          src="https://chocolate-auckland-campus-kitty.trycloudflare.com" 
+          style="width: 100%; height: 100%; border: none;"
+          allow="accelerometer; autoplay; camera; microphone; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          loading="lazy">
+        </iframe>
       </div>
     </div>
 
