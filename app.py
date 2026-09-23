@@ -62,13 +62,13 @@ def handle_start_world(image, prompt, seed):
         status_msg = (
             f"✅ [월드 세션 시작 완료]\n"
             f"• 세션 ID: {init_res['session_id']}\n"
-            f"• 현재 위치: 시작점 (0걸음)\n"
-            f"• 이제 아래 조작 패드 버튼이나 키보드 [W, A, S, D, Q, E, Space, C]를 눌러 탐험을 시작하세요!"
+            f"• 뷰포트가 활성화되었습니다. W, A, S, D 키를 눌러 즉시 3D 공간을 전진/회전하세요!\n"
+            f"• 1스텝당 약 2.5초 만에 다음 장면이 실시간 생성됩니다."
         )
         return (
-            None, # latest clip
-            init_res["current_image"], # current view
-            None, # full video
+            init_res["initial_clip"], # latest moving clip (shows starting scene video loop!)
+            init_res["current_image"], # current still frame
+            init_res["initial_clip"], # full journey video
             status_msg,
             init_res["history"],
         )
@@ -108,6 +108,11 @@ def handle_step_action(action_name, prompt, step_size, turn_angle):
     except Exception as e:
         logging.error(f"Step action error: {e}", exc_info=True)
         return None, None, None, f"❌ 이동 생성 실패: {str(e)}", "에러 발생"
+
+def make_step_handler(action_code):
+    def _handler(prompt_val, step_size_val, turn_angle_val):
+        return handle_step_action(action_code, prompt_val, step_size_val, turn_angle_val)
+    return _handler
 
 # ==============================================================================
 # Classic Batch Generation Handler (Preserved)
@@ -233,9 +238,10 @@ def create_ui():
         else if (key === 'x') targetId = 'btn_act_x';
 
         if (targetId) {
-            const btn = document.getElementById(targetId);
-            if (btn) {
-                btn.style.transform = 'scale(0.95)';
+            const el = document.getElementById(targetId);
+            if (el) {
+                const btn = el.tagName === 'BUTTON' ? el : (el.querySelector('button') || el);
+                btn.style.transform = 'scale(0.92)';
                 setTimeout(() => { btn.style.transform = 'none'; }, 150);
                 btn.click();
             }
@@ -386,7 +392,7 @@ def create_ui():
                     (btn_c, "C"), (btn_x, "IDLE"),
                 ]:
                     btn.click(
-                        fn=lambda k=act_key, p=inter_prompt, ss=step_size, ta=turn_angle: handle_step_action(k, p, ss, ta),
+                        fn=make_step_handler(act_key),
                         inputs=[inter_prompt, step_size, turn_angle],
                         outputs=[
                             inter_latest_video,

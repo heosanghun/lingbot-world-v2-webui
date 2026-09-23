@@ -67,6 +67,15 @@ class InteractiveEngine:
         init_frame_path = os.path.join(frames_dir, "frame_0000.jpg")
         init_img.save(init_frame_path, quality=95)
 
+        # Create instant 1-second initial video clip so viewports are immediately active
+        init_clip_path = os.path.join(clips_dir, "step_000_START.mp4")
+        resized_init = init_img.resize((832, 480), Image.Resampling.LANCZOS)
+        writer = imageio.get_writer(init_clip_path, fps=16, codec='libx264', quality=8)
+        frame_np = np.array(resized_init)
+        for _ in range(16):
+            writer.append_data(frame_np)
+        writer.close()
+
         self.active_session = {
             "session_id": session_id,
             "session_dir": session_dir,
@@ -77,8 +86,8 @@ class InteractiveEngine:
             "seed": seed if seed >= 0 else 42,
             "step_count": 0,
             "action_history": ["START"],
-            "clip_paths": [],
-            "full_video_path": None,
+            "clip_paths": [init_clip_path],
+            "full_video_path": init_clip_path,
             "cumulative_frames": [init_frame_path],
         }
 
@@ -87,6 +96,7 @@ class InteractiveEngine:
             "session_id": session_id,
             "step_count": 0,
             "current_image": init_img,
+            "initial_clip": init_clip_path,
             "prompt": self.active_session["current_prompt"],
             "history": "🏁 [시작점]",
         }
