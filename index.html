@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LingBot-World 2.0 (Infinity) | Interactive World Simulator</title>
+  <link rel="icon" href="assets/teaser.png" type="image/png">
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --card-bg: #151821;
+      --card-border: #262b3d;
+      --primary: #ff6f00;
+      --primary-hover: #ff8f00;
+      --accent: #00e5ff;
+      --text: #e0e6ed;
+      --text-muted: #8b9bb4;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+    header {
+      background: linear-gradient(180deg, #10131c 0%, #0b0c10 100%);
+      border-bottom: 1px solid var(--card-border);
+      padding: 30px 20px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255, 111, 0, 0.15);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+    h1 span { color: var(--accent); }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 800px;
+      margin: 10px auto 0;
+    }
+    .nav-buttons {
+      margin-top: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+    .btn-secondary { background: var(--card-bg); color: var(--text); border: 1px solid var(--card-border); }
+    .btn-secondary:hover { background: #1c2230; border-color: var(--accent); color: var(--accent); }
+    
+    .container {
+      max-width: 1200px;
+      margin: 40px auto 0;
+      padding: 0 20px;
+    }
+
+    /* Hero Game Screen Section */
+    .hero-simulator {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      margin-bottom: 40px;
+    }
+    .sim-header {
+      background: #11141e;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .sim-header .dots {
+      display: flex;
+      gap: 6px;
+    }
+    .sim-header .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+    .sim-title { font-weight: 600; font-size: 0.95rem; color: var(--text-muted); }
+    .sim-body {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      min-height: 520px;
+    }
+    @media (max-width: 900px) {
+      .sim-body { grid-template-columns: 1fr; }
+    }
+    .viewport-box {
+      background: #000;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .viewport-box video, .viewport-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .hud-overlay {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(11, 12, 16, 0.85);
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--accent);
+      font-family: monospace;
+      pointer-events: none;
+    }
+    .control-panel {
+      padding: 24px;
+      background: #12151e;
+      border-left: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .ctrl-section h3 {
+      font-size: 1.05rem;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 15px 0;
+    }
+    .pad-key {
+      background: #1c2130;
+      border: 1px solid #2e364e;
+      color: #fff;
+      padding: 14px 6px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.1s ease;
+    }
+    .pad-key:hover { background: #29324a; border-color: var(--primary); }
+    .pad-key:active, .pad-key.active-key {
+      background: var(--primary);
+      transform: scale(0.92);
+      box-shadow: 0 0 14px var(--primary);
+    }
+    .key-main { background: rgba(255, 111, 0, 0.2); border-color: var(--primary); }
+    .key-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      background: #0d0f15;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #1a1e2b;
+      margin-top: 10px;
+    }
+
+    /* Pillars Grid */
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-bottom: 50px;
+    }
+    .pillar-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: transform 0.2s ease;
+    }
+    .pillar-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+    .pillar-icon { font-size: 2rem; margin-bottom: 12px; }
+    .pillar-card h4 { font-size: 1.15rem; margin-bottom: 8px; color: #fff; }
+    .pillar-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* Code Block */
+    .code-block {
+      background: #000;
+      border: 1px solid var(--card-border);
+      padding: 16px 20px;
+      border-radius: 8px;
+      font-family: monospace;
+      color: #5af78e;
+      margin: 15px 0;
+      overflow-x: auto;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--card-border);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">🚀 Next-Gen Causal World Simulator</div>
+    <h1>LingBot-World <span>2.0 (Infinity)</span></h1>
+    <p class="subtitle">2D 이미지 1장으로 무한한 3D 가상 세계를 창조하고, 키보드 WASD 방향키로 게임처럼 실시간 탐험하는 인공지능 월드 모델</p>
+    <div class="nav-buttons">
+      <a href="http://localhost:7860" target="_blank" class="btn btn-primary">🎮 로컬 실시간 WebUI 접속 (Port 7860)</a>
+      <a href="https://github.com/heosanghun/lingbot-world-v2-webui" target="_blank" class="btn btn-secondary">📦 GitHub 저장소</a>
+      <a href="https://www.reactor.inc/lingbot-world-v2" target="_blank" class="btn btn-secondary">🌐 Reactor 공식 클라우드 데모</a>
+      <a href="https://arxiv.org/abs/2607.07534" target="_blank" class="btn btn-secondary">📄 arXiv 기술 보고서</a>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Interactive Simulator Showcase -->
+    <div class="hero-simulator">
+      <div class="sim-header">
+        <div class="dots">
+          <div class="dot dot-red"></div>
+          <div class="dot dot-yellow"></div>
+          <div class="dot dot-green"></div>
+        </div>
+        <div class="sim-title">3D Interactive World Viewport Simulation</div>
+        <div><span style="color:#00e5ff; font-size:0.85rem;">● Online / In-Memory GPU</span></div>
+      </div>
+      <div class="sim-body">
+        <div class="viewport-box">
+          <img id="view_screen" src="assets/teaser.png" alt="World Viewport">
+          <div class="hud-overlay" id="hud_text">🎮 3D 시뮬레이터 준비 완료 | WASD 키보드로 조작하세요!</div>
+        </div>
+        <div class="control-panel">
+          <div class="ctrl-section">
+            <h3>🕹️ 실시간 WASD 조작 패드</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">아래 버튼을 클릭하거나 키보드의 <strong>[W, A, S, D, Q, E]</strong> 키를 직접 눌러보세요.</p>
+            <div class="pad-grid">
+              <div class="pad-key" id="k_q" onclick="triggerKey('Q', '⤹ 좌회전')">Q<br><span style="font-size:0.75rem;">좌회전</span></div>
+              <div class="pad-key key-main" id="k_w" onclick="triggerKey('W', '⬆️ 전진')">W<br><span style="font-size:0.75rem;">전진</span></div>
+              <div class="pad-key" id="k_e" onclick="triggerKey('E', '⤸ 우회전')">E<br><span style="font-size:0.75rem;">우회전</span></div>
+              <div class="pad-key" id="k_a" onclick="triggerKey('A', '⬅️ 좌이동')">A<br><span style="font-size:0.75rem;">좌이동</span></div>
+              <div class="pad-key" id="k_x" onclick="triggerKey('X', '⏸️ 정지')">X<br><span style="font-size:0.75rem;">정지</span></div>
+              <div class="pad-key" id="k_d" onclick="triggerKey('D', '➡️ 우이동')">D<br><span style="font-size:0.75rem;">우이동</span></div>
+              <div class="pad-key" id="k_space" onclick="triggerKey('Space', '🔼 상승')">Space<br><span style="font-size:0.75rem;">상승</span></div>
+              <div class="pad-key key-main" id="k_s" onclick="triggerKey('S', '⬇️ 후진')">S<br><span style="font-size:0.75rem;">후진</span></div>
+              <div class="pad-key" id="k_c" onclick="triggerKey('C', '🔽 하강')">C<br><span style="font-size:0.75rem;">하강</span></div>
+            </div>
+            <div class="key-info">
+              💡 <strong>조작 팁:</strong> 로컬 GPU 서버(<a href="http://localhost:7860" target="_blank" style="color:var(--accent);">http://localhost:7860</a>)를 실행하면, 누르는 즉시 신경망이 2초 만에 새로운 공간을 렌더링합니다.
+            </div>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <a href="http://localhost:7860" target="_blank" class="btn btn-primary" style="width: 100%; justify-content: center;">
+              🚀 로컬 Web UI 열기 (GPU 추론)
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Pillars Section -->
+    <h2 class="section-title">🌟 LingBot-World 2.0 핵심 기술 아키텍처</h2>
+    <div class="pillars-grid">
+      <div class="pillar-card">
+        <div class="pillar-icon">♾️</div>
+        <h4>무한 상호작용 (Unbounded Horizon)</h4>
+        <p>인과적(Causal) 사전학습 패러다임과 동적 KV 캐시 스케줄링을 통해 메모리 폭발이나 드리프트 왜곡 없이 끝없는 세계를 탐험합니다.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">⚡</div>
+        <h4>초고속 응답 (Real-Time Distillation)</h4>
+        <p>13억 파라미터(1.3B)와 14B Causal-Fast 증류 모델로, 단일 GPU(RTX 6000 Ada)에서 1스텝당 1.6초 디노이징을 달성했습니다.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">🎬</div>
+        <h4>디렉터-파일럿 에이전트 하네스</h4>
+        <p>VLM(비전-언어 모델)이 '감독(Director)'이 되어 거시적 사건을 계획하고, Causal DiT가 '조종사(Pilot)'가 되어 물리적 비디오를 실시간 렌더링합니다.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">🎮</div>
+        <h4>Plücker 카메라 광선 주입</h4>
+        <p>OpenCV 3D 좌표계 기준의 카메라 회전 및 이동 벡터를 Plücker 광선 임베딩으로 인과적 트랜스포머에 주입하여 완벽한 시점 제어를 보장합니다.</p>
+      </div>
+    </div>
+
+    <!-- Quick Run Guide -->
+    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 24px;">
+      <h3 style="color:#fff; margin-bottom: 12px;">💻 로컬 실행 가이드 (Quick Start)</h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">저장소를 클론하고 아래 명령어를 실행하면, 브라우저에서 즉시 실시간 탐험을 즐길 수 있습니다:</p>
+      <div class="code-block">
+# 1. 저장소 이동 및 가상환경 활성화
+cd lingbot-world-v2
+
+# 2. 실시간 인터랙티브 Web UI 실행
+python app.py --host 0.0.0.0 --port 7860
+
+# 3. 브라우저에서 접속: http://localhost:7860
+      </div>
+    </div>
+
+    <footer>
+      <p>© 2026 LingBot-World 2.0 WebUI Project by <a href="https://github.com/heosanghun" target="_blank" style="color:var(--accent);">heosanghun</a> | Based on Robbyant LingBot-World Team Research</p>
+    </footer>
+
+  </div>
+
+  <script>
+    function triggerKey(keyName, desc) {
+      const hud = document.getElementById('hud_text');
+      hud.innerHTML = `🎮 액션 감지: <strong>[${keyName}] ${desc}</strong> ➔ 3D 카메라 궤적 연산 중...`;
+      
+      const el = document.getElementById('k_' + keyName.toLowerCase());
+      if (el) {
+        el.classList.add('active-key');
+        setTimeout(() => el.classList.remove('active-key'), 200);
+      }
+    }
+
+    // Keyboard listener for landing demo
+    window.addEventListener('keydown', function(e) {
+      const k = e.key.toLowerCase();
+      const map = {
+        'w': 'W', 'arrowup': 'W',
+        's': 'S', 'arrowdown': 'S',
+        'a': 'A', 'arrowleft': 'A',
+        'd': 'D', 'arrowright': 'D',
+        'q': 'Q', 'e': 'E', ' ': 'Space', 'c': 'C', 'x': 'X'
+      };
+      if (map[k]) {
+        if (k === ' ') e.preventDefault();
+        const descs = {
+          'W': '⬆️ 전진', 'S': '⬇️ 후진', 'A': '⬅️ 좌이동', 'D': '➡️ 우이동',
+          'Q': '⤹ 좌회전', 'E': '⤸ 우회전', 'Space': '🔼 상승', 'C': '🔽 하강', 'X': '⏸️ 정지'
+        };
+        triggerKey(map[k], descs[map[k]]);
+      }
+    });
+  </script>
+</body>
+</html>
